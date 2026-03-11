@@ -1,4 +1,4 @@
-from app.models.meeting import MeetingResponse
+from app.models.meeting import MeetingCreate, MeetingResponse
 
 # temporary in-memory meetings store
 # this simulates a database for now
@@ -15,6 +15,19 @@ def list_meetings() -> list[MeetingResponse]:
 def get_meeting_by_id(meeting_id: str) -> MeetingResponse | None:
     for meeting in MEETINGS:
         if meeting["id"] == meeting_id:
-            return meeting
+            return MeetingResponse(**meeting)
 
     return None
+
+# create a new meeting and return it
+def create_meeting(meeting_data: MeetingCreate) -> MeetingResponse:
+    next_id = str(len(MEETINGS) + 1)
+
+    meeting = {
+        "id": next_id,
+        "title": meeting_data.title,
+    }
+
+    MEETINGS.append(meeting)
+
+    return MeetingResponse(**meeting)

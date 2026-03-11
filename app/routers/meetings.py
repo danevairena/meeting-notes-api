@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from app.services import meetings_service
-from app.models.meeting import MeetingResponse
+from app.models.meeting import MeetingCreate, MeetingResponse
 
 # create router instance for meeting related endpoints
 router = APIRouter(
@@ -23,3 +23,8 @@ def get_meeting(meeting_id: str):
         raise HTTPException(status_code=404, detail="meeting not found")
 
     return meeting
+
+# create a new meeting
+@router.post("/", response_model=MeetingResponse, status_code=status.HTTP_201_CREATED)
+def create_meeting(meeting_data: MeetingCreate):
+    return meetings_service.create_meeting(meeting_data)

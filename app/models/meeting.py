@@ -5,6 +5,10 @@ from pydantic import BaseModel
 class MeetingBase(BaseModel):
     title: str
 
+# schema used when creating a new meeting
+class MeetingCreate(MeetingBase):
+    pass
+
 # schema used when returning a meeting from the api
 class MeetingResponse(MeetingBase):
     id: str
