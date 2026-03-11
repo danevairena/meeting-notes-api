@@ -1,5 +1,5 @@
-from fastapi import APIRouter
-
+from fastapi import APIRouter, HTTPException
+from app.services import meetings_service
 
 # create router instance for meeting related endpoints
 router = APIRouter(
@@ -7,23 +7,18 @@ router = APIRouter(
     tags=["meetings"],
 )
 
-# temporary in-memory meetings store
-# this will later be replaced with a database
-MEETINGS = [
-    {"id": "1", "title": "Product sync"},
-    {"id": "2", "title": "Engineering weekly"},
-]
-
 # return a list of all meetings
 @router.get("/")
 def list_meetings():
-    return MEETINGS
+    return meetings_service.list_meetings()
 
 # return a single meeting by id
 @router.get("/{meeting_id}")
 def get_meeting(meeting_id: str):
-    for meeting in MEETINGS:
-        if meeting["id"] == meeting_id:
-            return meeting
+    meeting = meetings_service.get_meeting_by_id(meeting_id)
 
-    return {"error": "meeting not found"}
+    # raise http error if meeting does not exist
+    if meeting is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
+
+    return meeting
