@@ -4,7 +4,7 @@ from app.repositories import notes_repository
 
 
 # generate notes from meeting transcript
-def process_meeting(meeting_id: str) -> MeetingNotesResponse | None:
+def process_meeting(meeting_id: str) -> MeetingNotesResponse:
     meeting = meetings_service.get_meeting_by_id(meeting_id)
 
     # return none if meeting does not exist

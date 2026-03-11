@@ -19,13 +19,7 @@ def list_meetings():
 # return a single meeting by id
 @router.get("/{meeting_id}", response_model=MeetingResponse)
 def get_meeting(meeting_id: str):
-    meeting = meetings_service.get_meeting_by_id(meeting_id)
-
-    # raise http error if meeting does not exist
-    if meeting is None:
-        raise HTTPException(status_code=404, detail="meeting not found")
-
-    return meeting
+     return meetings_service.get_meeting_by_id(meeting_id)
 
 # create a new meeting
 @router.post("/", response_model=MeetingResponse, status_code=status.HTTP_201_CREATED)
@@ -46,10 +40,4 @@ def get_meeting_notes(meeting_id: str):
 # process meeting transcript and generate notes
 @router.post("/{meeting_id}/process", response_model=MeetingNotesResponse)
 def process_meeting(meeting_id: str):
-    notes = processing_service.process_meeting(meeting_id)
-
-    # raise http error if meeting does not exist
-    if notes is None:
-        raise HTTPException(status_code=404, detail="meeting not found")
-
-    return notes
+    return processing_service.process_meeting(meeting_id)
