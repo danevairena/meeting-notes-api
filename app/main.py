@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-
+from app.settings import settings
+from app.routers import meetings
 from app.settings import settings
 
 
@@ -9,6 +10,8 @@ app = FastAPI(
     version=settings.app_version,
 )
 
+# register meetings router
+app.include_router(meetings.router)
 
 # expose a simple endpoint to verify the service is running
 @app.get("/health")
