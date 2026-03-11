@@ -1,3 +1,5 @@
+from app.models.meeting import MeetingResponse
+
 # temporary in-memory meetings store
 # this simulates a database for now
 MEETINGS = [
@@ -6,11 +8,11 @@ MEETINGS = [
 ]
 
 # return all meetings
-def list_meetings():
+def list_meetings() -> list[MeetingResponse]:
     return MEETINGS
 
 # return a single meeting by id
-def get_meeting_by_id(meeting_id: str):
+def get_meeting_by_id(meeting_id: str) -> MeetingResponse | None:
     for meeting in MEETINGS:
         if meeting["id"] == meeting_id:
             return meeting
