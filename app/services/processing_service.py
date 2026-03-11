@@ -1,6 +1,6 @@
 from app.models.note import MeetingNotesResponse
 from app.services import meetings_service
-from app.services.notes_service import NOTES
+from app.repositories import notes_repository
 
 
 # generate notes from meeting transcript
@@ -17,9 +17,4 @@ def process_meeting(meeting_id: str) -> MeetingNotesResponse | None:
     generated_notes = f"summary: {transcript[:100]}"
 
     # store generated notes
-    NOTES[meeting_id] = generated_notes
-
-    return MeetingNotesResponse(
-        meeting_id=meeting_id,
-        notes=generated_notes,
-    )
+    return notes_repository.save_notes(meeting_id, generated_notes)
