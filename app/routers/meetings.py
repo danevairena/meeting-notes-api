@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, status
 from app.services import meetings_service
 from app.models.meeting import MeetingCreate, MeetingResponse
 from app.models.note import MeetingNotesResponse
-from app.services import notes_service
+from app.services import notes_service, processing_service
+
 
 # create router instance for meeting related endpoints
 router = APIRouter(
@@ -39,5 +40,16 @@ def get_meeting_notes(meeting_id: str):
     # raise http error if notes do not exist
     if notes is None:
         raise HTTPException(status_code=404, detail="notes not found")
+
+    return notes
+
+# process meeting transcript and generate notes
+@router.post("/{meeting_id}/process", response_model=MeetingNotesResponse)
+def process_meeting(meeting_id: str):
+    notes = processing_service.process_meeting(meeting_id)
+
+    # raise http error if meeting does not exist
+    if notes is None:
+        raise HTTPException(status_code=404, detail="meeting not found")
 
     return notes
