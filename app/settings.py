@@ -1,0 +1,25 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    # define basic application metadata and runtime environment
+    app_env: str = "development"
+    app_name: str = "Meeting Notes API"
+    app_version: str = "0.1.0"
+
+    # define external service configuration
+    supabase_url: str = ""
+    supabase_key: str = ""
+    gemini_api_key: str = ""
+    log_level: str = "INFO"
+
+    # load environment variables from .env file
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+# create a single settings instance for the whole app
+settings = Settings()
