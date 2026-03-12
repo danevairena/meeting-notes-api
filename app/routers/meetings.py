@@ -5,7 +5,7 @@ from app.models.meeting import MeetingCreate, MeetingResponse, MeetingListRespon
 from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
 from app.services import chunks_service, meetings_service, notes_service, process_cache_service, processing_service, upload_meeting_service
-from app.errors import NotesNotFoundError, BadRequestError
+from app.errors import NotesNotFoundError
 
 
 # create router instance for meeting related endpoints
@@ -60,15 +60,11 @@ def upload_meeting(
     source: str = Form(...),
     project_name: str | None = Form(None),
 ):
-    try:
-        return upload_meeting_service.create_meeting_from_upload(
-            file=file,
-            source=source,
-            project_name=project_name,
-        )
-    # convert validation errors into consistent API error
-    except ValueError as exc:
-        raise BadRequestError(str(exc)) from exc
+    return upload_meeting_service.create_meeting_from_upload(
+        file=file,
+        source=source,
+        project_name=project_name,
+    )
 
 
 # process meeting transcript and generate notes using selected llm
