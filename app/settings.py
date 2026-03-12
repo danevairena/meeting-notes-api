@@ -8,15 +8,15 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
 
     # define database configuration
-    supabase_url: str = ""
-    supabase_key: str = ""
+    supabase_url: str
+    supabase_key: str
 
     # define llm provider configuration
-    gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_api_key: str
+    gemini_model: str
 
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    openai_api_key: str
+    openai_model: str
 
     # define logging configuration
     log_level: str = "INFO"

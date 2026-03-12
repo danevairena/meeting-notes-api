@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 from app.models.note import MeetingNotesResponse
 from app.services import meetings_service
 from app.repositories import chunks_repository, notes_repository
@@ -73,6 +75,8 @@ def process_meeting(meeting_id: str, llm: str) -> MeetingNotesResponse:
 
     extracted_chunks: list[dict[str, object]] = []
     raw_outputs: list[str] = []
+    successful_chunks = 0
+    failed_chunks = 0
 
     for chunk in transcript_chunks:
         try:
@@ -82,22 +86,17 @@ def process_meeting(meeting_id: str, llm: str) -> MeetingNotesResponse:
             )
             extracted_chunks.append(extracted_notes)
             raw_outputs.append(raw_output)
+            successful_chunks += 1
         except Exception as exc:
-            # keep processing remaining chunks even if one chunk fails
             raw_outputs.append(f"chunk processing failed: {exc}")
+            failed_chunks += 1
 
     # fallback when all chunk extractions fail
     if not extracted_chunks:
-        note_payload = {
-            "meeting_id": meeting_id,
-            "summary": None,
-            "action_items": [],
-            "key_takeaways": [],
-            "topics": [],
-            "next_steps": [],
-            "llm_raw": "\n\n".join(raw_outputs),
-            "llm": llm,
-        }
+        raise HTTPException(
+            status_code=503,
+            detail="Meeting processing failed. No transcript chunks were processed."
+        )
 
         return notes_repository.upsert_notes(note_payload)
 

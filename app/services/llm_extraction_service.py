@@ -1,39 +1,47 @@
 import json
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.clients.llm_client import generate_structured_content, generate_text_content
 
 
 # represent a single extracted action item
 class ExtractedActionItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     text: str
-    owner: str | None = None
-    due_date: str | None = None
+    owner: str | None
+    due_date: str | None
 
 
 # represent a single extracted next step
 class ExtractedNextStep(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     text: str
-    owner: str | None = None
+    owner: str | None
 
 
 # represent extracted meeting notes for a single transcript chunk
 class ExtractedMeetingNotes(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     summary: str
-    action_items: list[ExtractedActionItem] = Field(default_factory=list)
-    key_takeaways: list[str] = Field(default_factory=list)
-    topics: list[str] = Field(default_factory=list)
-    next_steps: list[ExtractedNextStep] = Field(default_factory=list)
+    action_items: list[ExtractedActionItem]
+    key_takeaways: list[str]
+    topics: list[str]
+    next_steps: list[ExtractedNextStep]
 
 
 # represent rewritten clean meeting notes
 class CleanMeetingNotes(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
     summary: str
-    action_items: list[ExtractedActionItem] = Field(default_factory=list)
-    key_takeaways: list[str] = Field(default_factory=list)
-    topics: list[str] = Field(default_factory=list)
-    next_steps: list[ExtractedNextStep] = Field(default_factory=list)
+    action_items: list[ExtractedActionItem]
+    key_takeaways: list[str]
+    topics: list[str]
+    next_steps: list[ExtractedNextStep]
 
 
 # define prompt for chunk level extraction

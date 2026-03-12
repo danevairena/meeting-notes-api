@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 from typing import Any
 from uuid import UUID
 from datetime import datetime
@@ -6,13 +6,13 @@ from datetime import datetime
 
 # represent a single action item extracted from the meeting
 class ActionItem(BaseModel):
-    task: str
+    task: str = Field(validation_alias=AliasChoices("task", "text"))
     owner: str | None = None
     due_date: str | None = None
 
 # represent a single next step extracted from the meeting
 class NextStep(BaseModel):
-    step: str
+    step: str = Field(validation_alias=AliasChoices("step", "text"))
     owner: str | None = None
     due_date: str | None = None
 
