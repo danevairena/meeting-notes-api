@@ -3,6 +3,7 @@ from app.services import meetings_service
 from app.models.meeting import MeetingCreate, MeetingResponse
 from app.models.note import MeetingNotesResponse
 from app.services import notes_service, processing_service
+from app.models.processing import ProcessMeetingRequest
 
 
 # create router instance for meeting related endpoints
@@ -26,18 +27,18 @@ def get_meeting(meeting_id: str):
 def create_meeting(meeting_data: MeetingCreate):
     return meetings_service.create_meeting(meeting_data)
 
-# return notes for a meeting
-@router.get("/{meeting_id}/notes", response_model=MeetingNotesResponse)
+# return all generated notes versions for a meeting
+@router.get("/{meeting_id}/notes", response_model=list[MeetingNotesResponse])
 def get_meeting_notes(meeting_id: str):
-    notes = notes_service.get_notes_by_meeting_id(meeting_id)
+    notes = notes_service.list_notes_by_meeting_id(meeting_id)
 
-    # raise http error if notes do not exist
-    if notes is None:
+    # raise http error if no notes exist
+    if not notes:
         raise HTTPException(status_code=404, detail="notes not found")
 
     return notes
 
-# process meeting transcript and generate notes
+# process meeting transcript and generate notes using selected llm
 @router.post("/{meeting_id}/process", response_model=MeetingNotesResponse)
-def process_meeting(meeting_id: str):
-    return processing_service.process_meeting(meeting_id)
+def process_meeting(meeting_id: str, request: ProcessMeetingRequest):
+    return processing_service.process_meeting(meeting_id=meeting_id, llm=request.llm)
