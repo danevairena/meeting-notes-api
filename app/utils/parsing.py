@@ -1,0 +1,87 @@
+import re
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+from typing import Optional
+
+
+# support full and short english month names
+_month_re = (
+    r"(January|February|March|April|May|June|July|August|September|October|November|December|"
+    r"Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+)
+
+# parse filenames like "AI TEAM MEETING - July 17 (37 mins)"
+_filename_re = re.compile(
+    rf"^(?P<title>.+?)\s*-\s*(?P<month>{_month_re})\s+(?P<day>\d{{1,2}})\s*(?:\((?P<mins>\d+)\s*mins\))?$",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class ParsedMeeting:
+    title: str
+    meeting_date: date
+    duration_mins: Optional[int]
+
+
+# normalize whitespace in the filename stem
+def _clean_stem(stem: str) -> str:
+    return re.sub(r"\s+", " ", stem).strip()
+
+
+# parse either a full month name or a short month name
+def _parse_month(month: str) -> int:
+    normalized = month.strip()
+
+    try:
+        return datetime.strptime(normalized, "%B").month
+    except ValueError:
+        return datetime.strptime(normalized, "%b").month
+
+
+# extract title, month, day, and optional duration from a filename stem
+def _parse_month_day(stem: str):
+    stem = _clean_stem(stem)
+    stem = re.sub(r"\s*\(\s*(\d+)\s*mins\s*\)\s*$", r" (\1 mins)", stem, flags=re.IGNORECASE)
+
+    match = _filename_re.match(stem)
+    if not match:
+        return None
+
+    title = _clean_stem(match.group("title"))
+    month = match.group("month")
+    day = int(match.group("day"))
+    mins = match.group("mins")
+    duration = int(mins) if mins else None
+
+    return title, day, duration, month
+
+
+# parse meeting metadata from filename and file modified time
+def parse_meeting_from_path(file_path: Path) -> ParsedMeeting:
+    stem = file_path.stem
+    fallback_date = date.fromtimestamp(file_path.stat().st_mtime)
+    fallback_year = fallback_date.year
+
+    parsed = _parse_month_day(stem)
+    if not parsed:
+        return ParsedMeeting(
+            title=_clean_stem(stem),
+            meeting_date=fallback_date,
+            duration_mins=None,
+        )
+
+    title, day, duration, month = parsed
+    month_index = _parse_month(month)
+    meeting_dt = date(fallback_year, month_index, day)
+
+    # adjust year if parsed meeting date falls in the future
+    if meeting_dt > date.today():
+        meeting_dt = date(fallback_year - 1, month_index, day)
+
+    return ParsedMeeting(
+        title=title,
+        meeting_date=meeting_dt,
+        duration_mins=duration,
+    )
