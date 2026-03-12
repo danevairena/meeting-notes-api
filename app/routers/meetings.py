@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from uuid import UUID
+from fastapi import APIRouter, HTTPException, status, File, Form, UploadFile
 
 from app.models.meeting import MeetingCreate, MeetingResponse
 from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
-from app.services import chunks_service, meetings_service, notes_service, processing_service
+from app.services import chunks_service, meetings_service, notes_service, processing_service, upload_meeting_service
 
 
 # create router instance for meeting related endpoints
@@ -47,6 +48,24 @@ def get_meeting_chunks(meeting_id: str):
 @router.post("/", response_model=MeetingResponse, status_code=status.HTTP_201_CREATED)
 def create_meeting(meeting_data: MeetingCreate):
     return meetings_service.create_meeting(meeting_data)
+
+
+# create a new meeting from uploaded transcript file
+@router.post("/upload", response_model=MeetingResponse, status_code=status.HTTP_201_CREATED)
+def upload_meeting(
+    file: UploadFile = File(...),
+    source: str = Form(...),
+    project_id: UUID | None = Form(None),
+):
+    try:
+        return upload_meeting_service.create_meeting_from_upload(
+            file=file,
+            source=source,
+            project_id=project_id,
+        )
+    except ValueError as exc:
+        # convert upload validation errors into http 400 responses
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # process meeting transcript and generate notes using selected llm

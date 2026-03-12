@@ -7,3 +7,4 @@ google-genai
 openai
 python-docx
 pypdf
+python-multipart
