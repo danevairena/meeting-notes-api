@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, status, File, Form, UploadFile
+from fastapi import APIRouter, HTTPException, status, Query, File, Form, UploadFile
 
 from app.models.meeting import MeetingCreate, MeetingResponse
 from app.models.note import MeetingNotesResponse
@@ -14,10 +14,12 @@ router = APIRouter(
 )
 
 
-# return a list of all meetings
+# return a list of all meetings with optional project filter
 @router.get("/", response_model=list[MeetingResponse])
-def list_meetings():
-    return meetings_service.list_meetings()
+def list_meetings(project_id: UUID | None = Query(None)):
+    project_id_value = str(project_id) if project_id is not None else None
+
+    return meetings_service.list_meetings(project_id=project_id_value)
 
 
 # return a single meeting by id
@@ -55,13 +57,13 @@ def create_meeting(meeting_data: MeetingCreate):
 def upload_meeting(
     file: UploadFile = File(...),
     source: str = Form(...),
-    project_id: UUID | None = Form(None),
+    project_name: str | None = Form(None),
 ):
     try:
         return upload_meeting_service.create_meeting_from_upload(
             file=file,
             source=source,
-            project_id=project_id,
+            project_name=project_name,
         )
     except ValueError as exc:
         # convert upload validation errors into http 400 responses

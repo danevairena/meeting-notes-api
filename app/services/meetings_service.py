@@ -2,9 +2,9 @@ from app.errors import MeetingNotFoundError
 from app.models.meeting import MeetingCreate, MeetingResponse
 from app.repositories import meetings_repository
 
-# return all meetings
-def list_meetings() -> list[MeetingResponse]:
-    return meetings_repository.list_meetings()
+# return all meetings with optional project filter
+def list_meetings(project_id: str | None = None) -> list[MeetingResponse]:
+    return meetings_repository.list_meetings(project_id=project_id)
 
 # return a single meeting by id
 def get_meeting_by_id(meeting_id: str) -> MeetingResponse:

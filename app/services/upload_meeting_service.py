@@ -7,7 +7,7 @@ from fastapi import UploadFile
 
 from app.models.meeting import MeetingCreate, MeetingResponse
 from app.services.file_extraction_service import extract_transcript
-from app.services import meetings_service
+from app.services import meetings_service, projects_service
 from app.utils.parsing import parse_meeting_from_path
 
 
@@ -15,7 +15,7 @@ from app.utils.parsing import parse_meeting_from_path
 def create_meeting_from_upload(
     file: UploadFile,
     source: str,
-    project_id: UUID | None = None,
+    project_name: str | None = None,
 ) -> MeetingResponse:
     if not file.filename:
         raise ValueError("uploaded file must have a filename")
@@ -47,6 +47,13 @@ def create_meeting_from_upload(
 
         if not raw_transcript.strip():
             raise ValueError("uploaded file does not contain readable transcript text")
+
+        project_id = None
+
+        # resolve project id from project name when provided
+        if project_name and project_name.strip():
+            project = projects_service.get_or_create_project(project_name.strip())
+            project_id = project.id
 
         meeting_data = MeetingCreate(
             title=parsed_meeting.title,

@@ -2,9 +2,14 @@ from app.clients.supabase_client import supabase
 from app.models.meeting import MeetingResponse
 
 
-# return all meetings from database
-def list_meetings() -> list[MeetingResponse]:
-    response = supabase.table("meetings").select("*").execute()
+# return meetings from database with optional project filter
+def list_meetings(project_id: str | None = None) -> list[MeetingResponse]:
+    query = supabase.table("meetings").select("*")
+
+    if project_id is not None:
+        query = query.eq("project_id", project_id)
+
+    response = query.order("meeting_date", desc=True).execute()
 
     meetings = response.data or []
 

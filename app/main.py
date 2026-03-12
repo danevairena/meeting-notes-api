@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from app.errors import MeetingNotFoundError
 from app.logging_config import configure_logging
 from app.models.error import ErrorResponse
-from app.routers import meetings
+from app.routers import meetings, projects
 from app.settings import settings
 
 
@@ -22,7 +22,8 @@ app = FastAPI(
     version=settings.app_version,
 )
 
-# register meetings router
+# register routers
+app.include_router(projects.router)
 app.include_router(meetings.router)
 
 # handle known domain error for missing meetings
