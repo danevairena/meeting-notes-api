@@ -1,7 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status, Query, File, Form, UploadFile
 
-from app.models.meeting import MeetingCreate, MeetingResponse
+from app.models.meeting import MeetingCreate, MeetingResponse, MeetingListResponse
 from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
 from app.services import chunks_service, meetings_service, notes_service, process_cache_service, processing_service, upload_meeting_service
@@ -16,7 +16,7 @@ router = APIRouter(
 
 
 # return a list of all meetings with optional project filter
-@router.get("/", response_model=list[MeetingResponse])
+@router.get("/", response_model=list[MeetingListResponse])
 def list_meetings(project_id: UUID | None = Query(None)):
     project_id_value = str(project_id) if project_id is not None else None
 

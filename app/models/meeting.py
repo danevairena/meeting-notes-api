@@ -21,3 +21,14 @@ class MeetingCreate(MeetingBase):
 class MeetingResponse(MeetingBase):
     id: UUID
     created_at: datetime
+
+# schema used when returning meetings list with notes availability
+class MeetingListResponse(BaseModel):
+    id: UUID
+    title: str
+    meeting_date: date
+    source: str
+    source_file: str
+    project_id: Optional[UUID] = None
+    created_at: datetime
+    has_notes: bool
