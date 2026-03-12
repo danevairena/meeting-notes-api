@@ -46,6 +46,9 @@ def process_meeting(meeting_id: str, llm: str) -> MeetingNotesResponse:
     # remove empty chunks defensively after normalization and splitting
     transcript_chunks = [chunk.strip() for chunk in transcript_chunks if chunk.strip()]
 
+    # replace existing transcript chunks for a meeting with a new chunk set
+    chunks_repository.replace_chunks(meeting_id=meeting_id,chunks=transcript_chunks)
+
     # handle empty transcripts gracefully
     if not transcript_chunks:
         note_payload = {
