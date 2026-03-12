@@ -57,7 +57,7 @@ def create_meeting(meeting_data: MeetingCreate):
 @router.post("/upload", response_model=MeetingResponse, status_code=status.HTTP_201_CREATED)
 def upload_meeting(
     file: UploadFile = File(...),
-    source: str = Form(...),
+    source: str = Form("upload"),
     project_name: str | None = Form(None),
 ):
     return upload_meeting_service.create_meeting_from_upload(

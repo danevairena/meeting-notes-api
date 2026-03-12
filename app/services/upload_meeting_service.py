@@ -53,10 +53,11 @@ def create_meeting_from_upload(
 
         project_id = None
 
-        # resolve project id from project name when provided
-        if project_name and project_name.strip():
-            project = projects_service.get_or_create_project(project_name.strip())
-            project_id = project.id
+        # resolve project id from project name or fallback to default project
+        project_name_value = project_name.strip() if project_name and project_name.strip() else "unknown"
+
+        project = projects_service.get_or_create_project(project_name_value)
+        project_id = project.id
 
         meeting_data = MeetingCreate(
             title=parsed_meeting.title,
