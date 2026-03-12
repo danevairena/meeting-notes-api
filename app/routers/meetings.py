@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status, Query, File, Form, UploadF
 from app.models.meeting import MeetingCreate, MeetingResponse
 from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
-from app.services import chunks_service, meetings_service, notes_service, processing_service, upload_meeting_service
+from app.services import chunks_service, meetings_service, notes_service, process_cache_service, processing_service, upload_meeting_service
 
 
 # create router instance for meeting related endpoints
@@ -73,4 +73,24 @@ def upload_meeting(
 # process meeting transcript and generate notes using selected llm
 @router.post("/{meeting_id}/process", response_model=MeetingNotesResponse)
 def process_meeting(meeting_id: str, request: ProcessMeetingRequest):
-    return processing_service.process_meeting(meeting_id=meeting_id,llm=request.llm)
+    cached_notes = process_cache_service.get_cached_notes(meeting_id=meeting_id, llm=request.llm)
+
+    # return cached result when the same meeting was processed recently
+    if cached_notes is not None:
+        return cached_notes
+
+    # reject repeated processing calls within the cooldown window
+    if process_cache_service.is_rate_limited(meeting_id=meeting_id, llm=request.llm):
+        raise HTTPException(
+            status_code=429,
+            detail="processing rate limit exceeded for this meeting and llm",
+        )
+
+    process_cache_service.mark_process_call(meeting_id=meeting_id, llm=request.llm)
+
+    notes = processing_service.process_meeting(meeting_id=meeting_id, llm=request.llm)
+
+    # cache the latest successful processing result
+    process_cache_service.set_cached_notes(meeting_id=meeting_id, llm=request.llm, notes=notes)
+
+    return notes
