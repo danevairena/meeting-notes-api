@@ -39,6 +39,33 @@ def handle_meeting_not_found(_: Request, exc: MeetingNotFoundError) -> JSONRespo
         content=error.model_dump(),
     )
 
+# handle known domain error for missing notes
+@app.exception_handler(NotesNotFoundError)
+def handle_notes_not_found(_: Request, exc: NotesNotFoundError) -> JSONResponse:
+    error = ErrorResponse(
+        error="not_found",
+        message=str(exc),
+    )
+
+    return JSONResponse(
+        status_code=404,
+        content=error.model_dump(),
+    )
+
+
+# handle invalid client requests with a consistent response shape
+@app.exception_handler(BadRequestError)
+def handle_bad_request(_: Request, exc: BadRequestError) -> JSONResponse:
+    error = ErrorResponse(
+        error="bad_request",
+        message=str(exc),
+    )
+
+    return JSONResponse(
+        status_code=400,
+        content=error.model_dump(),
+    )
+
 # handle unexpected server errors with a consistent response shape
 @app.exception_handler(Exception)
 def handle_unexpected_error(_: Request, exc: Exception) -> JSONResponse:

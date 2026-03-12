@@ -1,10 +1,10 @@
 import shutil
 import tempfile
 from pathlib import Path
-from uuid import UUID
 
 from fastapi import UploadFile
 
+from app.errors import BadRequestError
 from app.models.meeting import MeetingCreate, MeetingResponse
 from app.services.file_extraction_service import extract_transcript
 from app.services import meetings_service, projects_service
@@ -17,14 +17,16 @@ def create_meeting_from_upload(
     source: str,
     project_name: str | None = None,
 ) -> MeetingResponse:
+
+    # validate uploaded file name
     if not file.filename:
-        raise ValueError("uploaded file must have a filename")
+        raise BadRequestError("uploaded file must have a filename")
 
     suffix = Path(file.filename).suffix.lower()
 
     # allow only supported transcript file types
     if suffix not in {".docx", ".pdf"}:
-        raise ValueError("only .docx and .pdf files are supported")
+        raise BadRequestError("only .docx and .pdf files are supported")
 
     temp_file_path: Path | None = None
 
@@ -45,8 +47,9 @@ def create_meeting_from_upload(
         # extract transcript text from uploaded document
         raw_transcript = extract_transcript(temp_file_path)
 
+        # validate transcript content
         if not raw_transcript.strip():
-            raise ValueError("uploaded file does not contain readable transcript text")
+            raise BadRequestError("uploaded file does not contain readable transcript text")
 
         project_id = None
 

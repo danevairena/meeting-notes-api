@@ -5,6 +5,7 @@ from app.models.meeting import MeetingCreate, MeetingResponse
 from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
 from app.services import chunks_service, meetings_service, notes_service, process_cache_service, processing_service, upload_meeting_service
+from app.errors import NotesNotFoundError, BadRequestError
 
 
 # create router instance for meeting related endpoints
@@ -33,9 +34,9 @@ def get_meeting(meeting_id: str):
 def get_meeting_notes(meeting_id: str):
     notes = notes_service.list_notes_by_meeting_id(meeting_id)
 
-    # raise http error if no notes exist
+    # raise domain error if no notes exist
     if not notes:
-        raise HTTPException(status_code=404, detail="notes not found")
+        raise NotesNotFoundError(meeting_id)
 
     return notes
 
@@ -65,9 +66,9 @@ def upload_meeting(
             source=source,
             project_name=project_name,
         )
+    # convert validation errors into consistent API error
     except ValueError as exc:
-        # convert upload validation errors into http 400 responses
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise BadRequestError(str(exc)) from exc
 
 
 # process meeting transcript and generate notes using selected llm
