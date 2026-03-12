@@ -2,7 +2,11 @@ from app.models.note import MeetingNotesResponse
 from app.services import meetings_service
 from app.repositories import chunks_repository, notes_repository
 from app.utils.chunking import chunk_text
-from app.services.llm_extraction_service import extract_notes_from_chunk, generate_final_summary, rewrite_notes
+from app.services.llm_extraction_service import (
+    extract_notes_from_chunk,
+    generate_final_summary,
+    rewrite_notes,
+)
 
 
 # normalize extracted key takeaways into database shape
@@ -43,11 +47,14 @@ def merge_chunk_notes(chunk_notes: list[dict[str, object]]) -> dict[str, object]
 def process_meeting(meeting_id: str, llm: str) -> MeetingNotesResponse:
     meeting = meetings_service.get_meeting_by_id(meeting_id)
 
+    # split transcript into chunks
+    transcript_chunks = chunk_text(meeting.raw_transcript)
+
     # remove empty chunks defensively after normalization and splitting
     transcript_chunks = [chunk.strip() for chunk in transcript_chunks if chunk.strip()]
 
     # replace existing transcript chunks for a meeting with a new chunk set
-    chunks_repository.replace_chunks(meeting_id=meeting_id,chunks=transcript_chunks)
+    chunks_repository.replace_chunks(meeting_id=meeting_id, chunks=transcript_chunks)
 
     # handle empty transcripts gracefully
     if not transcript_chunks:
