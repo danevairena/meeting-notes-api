@@ -14,7 +14,7 @@ def get_project_by_id(project_id: str) -> ProjectResponse | None:
 
 # create a new project
 def create_project(project_data: ProjectCreate) -> ProjectResponse:
-    project_payload = project_data.model_dump()
+    project_payload = project_data.model_dump(mode="json")
 
     return projects_repository.create_project(project_payload)
 

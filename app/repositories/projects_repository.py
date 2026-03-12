@@ -1,3 +1,5 @@
+from postgrest.exceptions import APIError
+
 from app.clients.supabase_client import supabase
 from app.models.project import ProjectResponse
 
@@ -34,22 +36,23 @@ def get_project_by_id(project_id: str) -> ProjectResponse | None:
     return ProjectResponse(**project)
 
 
-# return a single project by name
+# return a project by name or none when it does not exist
 def get_project_by_name(name: str) -> ProjectResponse | None:
-    response = (
-        supabase.table("projects")
-        .select("*")
-        .eq("name", name)
-        .single()
-        .execute()
-    )
+    try:
+        response = (
+            supabase.table("projects")
+            .select("*")
+            .eq("name", name)
+            .single()
+            .execute()
+        )
+    except APIError as exc:
+        # return none when no project row is found
+        if "PGRST116" in str(exc):
+            return None
+        raise
 
-    project = response.data
-
-    if project is None:
-        return None
-
-    return ProjectResponse(**project)
+    return ProjectResponse(**response.data)
 
 
 # create a new project

@@ -40,7 +40,8 @@ def get_meeting_by_id(meeting_id: str) -> MeetingResponse:
 
 # create a new meeting and return it
 def create_meeting(meeting_data: MeetingCreate) -> MeetingResponse:
-    meeting_payload = meeting_data.model_dump()
+    # convert pydantic model into json-safe payload for supabase
+    meeting_payload = meeting_data.model_dump(mode="json")
 
     # persist meeting through repository and let database generate id and created_at
     return meetings_repository.create_meeting(meeting_payload)
