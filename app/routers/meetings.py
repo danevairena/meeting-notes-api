@@ -5,7 +5,7 @@ from app.models.meeting import MeetingCreate, MeetingResponse, MeetingListRespon
 from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
 from app.services import chunks_service, meetings_service, notes_service, process_cache_service, processing_service, upload_meeting_service
-from app.errors import NotesNotFoundError
+from app.errors import NotesNotFoundError, RateLimitExceededError
 
 
 # create router instance for meeting related endpoints
@@ -78,10 +78,7 @@ def process_meeting(meeting_id: str, request: ProcessMeetingRequest):
 
     # reject repeated processing calls within the cooldown window
     if process_cache_service.is_rate_limited(meeting_id=meeting_id, llm=request.llm):
-        raise HTTPException(
-            status_code=429,
-            detail="processing rate limit exceeded for this meeting and llm",
-        )
+        raise RateLimitExceededError(meeting_id, request.llm)
 
     process_cache_service.mark_process_call(meeting_id=meeting_id, llm=request.llm)
 

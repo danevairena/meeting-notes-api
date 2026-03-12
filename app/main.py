@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.errors import MeetingNotFoundError
+from app.errors import MeetingNotFoundError, NotesNotFoundError, BadRequestError, RateLimitExceededError
 from app.logging_config import configure_logging
 from app.models.error import ErrorResponse
 from app.routers import meetings, projects
@@ -88,3 +88,16 @@ def health_check() -> dict[str, str]:
         "status": "ok",
         "environment": settings.app_env,
     }
+
+# handle processing rate limit errors
+@app.exception_handler(RateLimitExceededError)
+def handle_rate_limit(_: Request, exc: RateLimitExceededError) -> JSONResponse:
+    error = ErrorResponse(
+        error="rate_limited",
+        message=str(exc),
+    )
+
+    return JSONResponse(
+        status_code=429,
+        content=error.model_dump(),
+    )

@@ -16,3 +16,8 @@ class NotesNotFoundError(Exception):
 class BadRequestError(Exception):
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+# domain error when processing rate limit is exceeded
+class RateLimitExceededError(Exception):
+    def __init__(self, meeting_id: str, llm: str) -> None:
+        super().__init__(f"processing rate limit exceeded for meeting '{meeting_id}' using llm '{llm}'")
