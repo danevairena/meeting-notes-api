@@ -58,7 +58,7 @@ def create_meeting(meeting_data: MeetingCreate):
 def upload_meeting(
     file: UploadFile = File(...),
     source: str = Form("upload"),
-    project_name: str | None = Form(None),
+    project_name: str = Form("unknown")
 ):
     return upload_meeting_service.create_meeting_from_upload(
         file=file,
