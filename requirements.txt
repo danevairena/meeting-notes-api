@@ -8,3 +8,4 @@ openai
 python-docx
 pypdf
 python-multipart
+pytest httpx
