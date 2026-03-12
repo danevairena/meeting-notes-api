@@ -10,6 +10,7 @@ def list_meetings() -> list[MeetingResponse]:
 def get_meeting_by_id(meeting_id: str) -> MeetingResponse:
     meeting = meetings_repository.get_meeting_by_id(meeting_id)
 
+    # raise domain error when meeting does not exist
     if meeting is None:
         raise MeetingNotFoundError(meeting_id)
 
@@ -17,14 +18,7 @@ def get_meeting_by_id(meeting_id: str) -> MeetingResponse:
 
 # create a new meeting and return it
 def create_meeting(meeting_data: MeetingCreate) -> MeetingResponse:
-    existing_meetings = meetings_repository.list_meetings()
+    meeting_payload = meeting_data.model_dump()
 
-    next_id = str(len(existing_meetings) + 1)
-
-    meeting = {
-        "id": next_id,
-        "title": meeting_data.title,
-        "raw_transcript": meeting_data.raw_transcript,
-    }
-
-    return meetings_repository.create_meeting(meeting)
+    # persist meeting through repository and let database generate id and created_at
+    return meetings_repository.create_meeting(meeting_payload)
