@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, status, Query, File, Form, UploadFile
+from fastapi import APIRouter, status, Query, File, Form, UploadFile
 
 from app.models.meeting import MeetingCreate, MeetingResponse, MeetingListResponse
 from app.models.note import MeetingNotesResponse
