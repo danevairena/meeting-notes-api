@@ -1,29 +1,33 @@
 from app.models.note import MeetingNotesResponse
+from app.clients.supabase_client import supabase
 
 
-# temporary notes storage
-NOTES = {
-    "1": "Discussed roadmap and release timeline",
-    "2": "Reviewed bugs and deployment pipeline",
-}
-
-# return notes by meeting id
+# return notes for a specific meeting from database
 def get_notes_by_meeting_id(meeting_id: str) -> MeetingNotesResponse | None:
-    notes = NOTES.get(meeting_id)
+    response = (
+        supabase.table("notes")
+        .select("*")
+        .eq("meeting_id", meeting_id)
+        .single()
+        .execute()
+    )
 
-    if notes is None:
+    note = response.data
+
+    # return none when no notes record exists
+    if note is None:
         return None
 
-    return MeetingNotesResponse(
-        meeting_id=meeting_id,
-        notes=notes,
+    return MeetingNotesResponse(**note)
+
+# create or replace notes for a meeting
+def upsert_notes(note_payload: dict) -> MeetingNotesResponse:
+    response = (
+        supabase.table("notes")
+        .upsert(note_payload, on_conflict="meeting_id")
+        .execute()
     )
 
-# save generated notes
-def save_notes(meeting_id: str, notes: str) -> MeetingNotesResponse:
-    NOTES[meeting_id] = notes
+    saved_note = response.data[0]
 
-    return MeetingNotesResponse(
-        meeting_id=meeting_id,
-        notes=notes,
-    )
+    return MeetingNotesResponse(**saved_note)
