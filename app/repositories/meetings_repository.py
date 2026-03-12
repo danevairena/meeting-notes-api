@@ -1,3 +1,5 @@
+from postgrest.exceptions import APIError
+
 from app.clients.supabase_client import supabase
 from app.models.meeting import MeetingResponse
 
@@ -15,22 +17,23 @@ def list_meetings(project_id: str | None = None) -> list[MeetingResponse]:
 
     return [MeetingResponse(**meeting) for meeting in meetings]
 
-# return a meeting by id
+# return a single meeting by id or none when it does not exist
 def get_meeting_by_id(meeting_id: str) -> MeetingResponse | None:
-    response = (
-        supabase.table("meetings")
-        .select("*")
-        .eq("id", meeting_id)
-        .single()
-        .execute()
-    )
+    try:
+        response = (
+            supabase.table("meetings")
+            .select("*")
+            .eq("id", meeting_id)
+            .single()
+            .execute()
+        )
+    except APIError as exc:
+        # return none when no meeting row is found
+        if "PGRST116" in str(exc):
+            return None
+        raise
 
-    meeting = response.data
-
-    if meeting is None:
-        return None
-
-    return MeetingResponse(**meeting)
+    return MeetingResponse(**response.data)
 
 # insert a new meeting into database
 def create_meeting(meeting: dict) -> MeetingResponse:
