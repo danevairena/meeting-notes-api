@@ -21,3 +21,15 @@ def replace_chunks(meeting_id: str, chunks: list[str]) -> None:
 
     # insert new chunk set
     supabase.table("transcript_chunks").insert(rows).execute()
+
+# return stored transcript chunks for a meeting ordered by chunk index
+def list_chunks_by_meeting_id(meeting_id: str) -> list[dict]:
+    response = (
+        supabase.table("transcript_chunks")
+        .select("*")
+        .eq("meeting_id", meeting_id)
+        .order("chunk_index")
+        .execute()
+    )
+
+    return response.data or []
