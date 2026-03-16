@@ -1,13 +1,14 @@
-from uuid import UUID
-from fastapi import APIRouter, status, Query, File, Form, UploadFile, BackgroundTasks
+from uuid import UUID, uuid4
+from fastapi import APIRouter, status, Query, File, Form, UploadFile, BackgroundTasks, HTTPException
 
 from app.models.meeting import MeetingCreate, MeetingResponse, MeetingListResponse
 from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
 from app.services import chunks_service, meetings_service, notes_service, process_cache_service, processing_service, upload_meeting_service
 from app.errors import NotesNotFoundError, RateLimitExceededError
-from app.models.google_docs_import import GoogleDocsImportRequest
-from app.services.google_docs_import_service import import_meetings_from_google_docs
+from app.models.google_docs_import import GoogleDocsImportRequest, GoogleDocsImportJobResponse, GoogleDocsImportJobStatusResponse
+from app.services.import_jobs import IMPORT_JOBS
+from app.services.google_docs_import_service import run_google_docs_import_job
 
 
 # create router instance for meeting related endpoints
@@ -92,14 +93,50 @@ def process_meeting(meeting_id: str, request: ProcessMeetingRequest):
     return notes
 
 # start google docs import in the background
-@router.post("/import/google-docs")
+@router.post(
+    "/import/google-docs",
+    response_model=GoogleDocsImportJobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def import_google_docs(
     request: GoogleDocsImportRequest,
     background_tasks: BackgroundTasks,
 ):
-    background_tasks.add_task(import_meetings_from_google_docs, request)
+    # generate a unique id for tracking the background import job
+    job_id = str(uuid4())
 
-    return {
-        "status": "accepted",
-        "message": "google docs import started in background",
-    }
+    # initialize the job state before starting background processing
+    IMPORT_JOBS[job_id] = GoogleDocsImportJobStatusResponse(
+        job_id=job_id,
+        status="pending",
+        total=len(request.meetings),
+        imported=0,
+        failed=0,
+        results=[],
+        error=None,
+    )
+
+    background_tasks.add_task(
+        run_google_docs_import_job,
+        job_id,
+        request,
+    )
+
+    return GoogleDocsImportJobResponse(
+        job_id=job_id,
+        status="pending",
+    )
+
+# return the current status and per-item results for a google docs import job
+@router.get(
+    "/import/google-docs/{job_id}",
+    response_model=GoogleDocsImportJobStatusResponse,
+)
+async def get_google_docs_import_job(job_id: str):
+    job = IMPORT_JOBS.get(job_id)
+
+    # return 404 when the provided job id does not exist
+    if job is None:
+        raise HTTPException(status_code=404, detail="Import job not found")
+
+    return job

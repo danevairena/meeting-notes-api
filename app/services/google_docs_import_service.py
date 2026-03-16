@@ -1,6 +1,7 @@
 from datetime import date
 
 from app.models.google_docs_import import GoogleDocsImportRequest, GoogleDocsImportResponse, GoogleDocsImportItemResult
+from app.services.import_jobs import IMPORT_JOBS
 from app.utils.google_docs import extract_google_doc_id, fetch_google_doc_text
 from app.models.meeting import MeetingCreate
 from app.services import meetings_service
@@ -37,22 +38,10 @@ async def import_meetings_from_google_docs(
             results.append(
                 GoogleDocsImportItemResult(
                     title=item.title,
-                    google_doc_url=str(item.google_doc_url),
+                    google_doc_url=item.google_doc_url,
                     success=True,
-                    meeting_id=str(created_meeting.id),
+                    meeting_id=created_meeting.id,
                     error=None,
-                )
-            )
-
-        except ValueError as exc:
-            # keep processing other items when one item fails validation or fetch
-            results.append(
-                GoogleDocsImportItemResult(
-                    title=item.title,
-                    google_doc_url=str(item.google_doc_url),
-                    success=False,
-                    meeting_id=None,
-                    error=str(exc),
                 )
             )
 
@@ -61,7 +50,7 @@ async def import_meetings_from_google_docs(
             results.append(
                 GoogleDocsImportItemResult(
                     title=item.title,
-                    google_doc_url=str(item.google_doc_url),
+                    google_doc_url=item.google_doc_url,
                     success=False,
                     meeting_id=None,
                     error=str(exc),
@@ -77,3 +66,37 @@ async def import_meetings_from_google_docs(
         failed=failed,
         results=results,
     )
+
+
+# run the google docs import as a tracked background job
+async def run_google_docs_import_job(
+    job_id: str,
+    payload: GoogleDocsImportRequest,
+) -> None:
+    job = IMPORT_JOBS[job_id]
+    job.status = "processing"
+    job.error = None
+
+    try:
+        response = await import_meetings_from_google_docs(payload)
+
+        # copy the final import summary into the in-memory job store
+        job.total = response.total
+        job.imported = response.imported
+        job.failed = response.failed
+        job.results = response.results
+
+        # mark the final job status based on import outcome
+        if response.imported > 0 and response.failed == 0:
+            job.status = "completed"
+        elif response.imported > 0 and response.failed > 0:
+            job.status = "completed_with_errors"
+        elif response.imported == 0 and response.failed > 0:
+            job.status = "failed"
+        else:
+            job.status = "completed"
+
+    except Exception as exc:
+        # store unexpected top-level job failure details
+        job.status = "failed"
+        job.error = str(exc)
