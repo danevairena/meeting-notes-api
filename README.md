@@ -396,12 +396,29 @@ curl -X POST http://localhost:8000/meetings/import/google-docs \
 }
 ```
 
-Each document is processed independently inside the background import job.
-If one document fails, the others can still be imported successfully.
+HTTP status: `202 Accepted`
+
+This endpoint starts an asynchronous import job.
+Use the returned `job_id` to check progress and retrieve per-item results.
 
 #### `GET /meetings/import/google-docs/{job_id}`
 
 Returns the current status of a Google Docs import job, including per-item import results.
+If the provided `job_id` does not exist, the API returns `404 Not Found`.
+
+Possible job statuses:
+- `pending` – the import job has been accepted but has not started yet
+- `processing` – the import job is currently running
+- `completed` – all items were imported successfully
+- `completed_with_errors` – some items succeeded and some failed
+- `failed` – the import job failed before completing
+
+Each item in `results` represents one requested meeting import and includes:
+- `title` – the input title
+- `google_doc_url` – the original Google Docs URL
+- `success` – whether the import for this item succeeded
+- `meeting_id` – the created meeting ID when successful
+- `error` – an error message when the item failed
 
 ```bash
 curl http://localhost:8000/meetings/import/google-docs/<job_id>
@@ -443,6 +460,12 @@ Example response
 }
 ```
 
+### Why this flow uses two endpoints
+
+The import operation is asynchronous because multiple Google Docs may need to be fetched and processed in a single request.
+The initial `POST /meetings/import/google-docs` endpoint starts the job and returns a `job_id`.
+The `GET /meetings/import/google-docs/{job_id}` endpoint is then used to retrieve final per-item results and partial-success outcomes.
+
 ---
 
 ### How it works
@@ -459,11 +482,12 @@ Example response
 
 ---
 
-### Limitations
+### Google Docs Import Limitations
 
--   Documents are imported as **plain text**, formatting is not
-    preserved.
--   The meeting date defaults to the current date if not provided.
+- Documents are imported as plain text, so formatting such as tables, images, and styling is not preserved.
+- The meeting date defaults to the current date when it cannot be derived during import.
+- Import job state is currently stored in memory and is lost if the application restarts.
+- Background imports currently run in-process and do not use a dedicated queue or worker system.
 
 ---
 
@@ -484,7 +508,7 @@ Example response
 7. Wait until the job status becomes:
    - `completed`
    - `completed_with_errors`
-   - or `failed`s
+   - or `failed`
 
 Example using curl:
 
@@ -498,6 +522,30 @@ curl -X POST http://localhost:8000/meetings/import/google-docs -H "Content-Type:
   ]
 }'
 ```
+
+Example partial-success scenario:
+
+```bash
+curl -X POST http://localhost:8000/meetings/import/google-docs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "meetings": [
+      {
+        "title": "Accessible Doc",
+        "google_doc_url": "https://docs.google.com/document/d/VALID_DOC_ID/edit"
+      },
+      {
+        "title": "Private Doc",
+        "google_doc_url": "https://docs.google.com/document/d/PRIVATE_DOC_ID/edit"
+      }
+    ]
+  }'
+```
+
+Expected behavior:
+- the accessible document is imported successfully
+- the inaccessible document is reported as failed
+- the job status becomes completed_with_errors
 
 ---
 
@@ -769,6 +817,7 @@ The current test suite includes:
 - `test_meetings.py` – meetings endpoint behavior
 - `test_google_docs_utils.py` – Google Docs URL parsing utilities
 - `test_google_docs_retrieval.py` – Google Docs download/extraction logic
+- `test_google_docs_import_jobs.py` – Google Docs import job creation, status polling, and per-item result handling
 - `conftest.py` – shared test fixtures
 
 ---
