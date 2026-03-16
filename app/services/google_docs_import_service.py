@@ -56,15 +56,15 @@ async def import_meetings_from_google_docs(
                 )
             )
 
-        except Exception:
-            # avoid leaking unexpected internal errors to the client
+        except Exception as exc:
+            # avoid losing unexpected persistence errors during debugging
             results.append(
                 GoogleDocsImportItemResult(
                     title=item.title,
                     google_doc_url=str(item.google_doc_url),
                     success=False,
                     meeting_id=None,
-                    error="unexpected error during google docs import",
+                    error=str(exc),
                 )
             )
 
