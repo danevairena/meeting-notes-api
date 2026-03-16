@@ -8,5 +8,8 @@ openai
 python-docx
 pypdf
 python-multipart
-pytest httpx
+httpx
 pytest-asyncio
+google-api-python-client
+google-auth
+google-auth-httplib2

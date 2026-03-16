@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # define logging configuration
     log_level: str = "INFO"
 
+    # define google service account configuration
+    google_service_account_file: str | None = None
+
     # load environment variables from .env file
     model_config = SettingsConfigDict(
         env_file=".env",
