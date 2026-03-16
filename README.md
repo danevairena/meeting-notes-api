@@ -77,6 +77,7 @@ meeting-notes-api
 │   │   ├── chunks_service.py
 │   │   ├── file_extraction_service.py
 │   │   ├── google_docs_import_service.py
+│   │   ├── import_jobs.py
 │   │   ├── llm_extraction_service.py
 │   │   ├── meetings_service.py
 │   │   ├── notes_service.py
@@ -364,9 +365,10 @@ Example response shape:
 ```
 #### `POST /meetings/import/google-docs`
 
-Imports multiple meetings from Google Docs.
+Starts a background job that imports multiple meetings from Google Docs.
 
 Each provided Google Doc is downloaded, converted to plain text, and stored as a meeting transcript.
+The endpoint returns a `job_id` that can be used to track the import progress.
 
 ```bash
 curl -X POST http://localhost:8000/meetings/import/google-docs \
@@ -389,26 +391,57 @@ curl -X POST http://localhost:8000/meetings/import/google-docs \
 
 ``` json
 {
-  "total": 2,
-  "imported": 1,
-  "failed": 1,
-  "results": [
-    {
-      "title": "Sprint Planning",
-      "status": "imported",
-      "meeting_id": "uuid"
-    },
-    {
-      "title": "Retrospective",
-      "status": "failed",
-      "error": "Document not accessible"
-    }
-  ]
+  "job_id": "uuid",
+  "status": "pending"
 }
 ```
 
-The endpoint processes each document independently.
-If one document fails, the others can still be imported.
+Each document is processed independently inside the background import job.
+If one document fails, the others can still be imported successfully.
+
+#### `GET /meetings/import/google-docs/{job_id}`
+
+Returns the current status of a Google Docs import job, including per-item import results.
+
+```bash
+curl http://localhost:8000/meetings/import/google-docs/<job_id>
+```
+
+Example response
+
+``` json
+{
+  "job_id": "uuid",
+  "status": "completed_with_errors",
+  "total": 3,
+  "imported": 2,
+  "failed": 1,
+  "results": [
+    {
+      "title": "Day 2",
+      "google_doc_url": "https://docs.google.com/document/d/DOC_ID/edit",
+      "success": true,
+      "meeting_id": "uuid",
+      "error": null
+    },
+    {
+      "title": "Day 1",
+      "google_doc_url": "https://docs.google.com/document/d/DOC_ID/edit",
+      "success": true,
+      "meeting_id": "uuid",
+      "error": null
+    },
+    {
+      "title": "Private Doc",
+      "google_doc_url": "https://docs.google.com/document/d/DOC_ID/edit",
+      "success": false,
+      "meeting_id": null,
+      "error": "private google doc not found or not shared with service account"
+    }
+  ],
+  "error": null
+}
+```
 
 ---
 
@@ -436,12 +469,22 @@ If one document fails, the others can still be imported.
 
 ### How to test
 
-1.  Create a Google Doc accessible to the configured import flow.
-2.  Add some meeting notes text.
-3.  Copy the document URL.
-4.  Send a request to:
+1. Create a Google Doc accessible to the configured import flow.
+2. Add some meeting notes text.
+3. Copy the document URL.
+4. Send a request to:
 
-    POST /meetings/import/google-docs
+   POST /meetings/import/google-docs
+
+5. Copy the returned `job_id`.
+6. Poll the job status endpoint:
+
+   GET /meetings/import/google-docs/{job_id}
+
+7. Wait until the job status becomes:
+   - `completed`
+   - `completed_with_errors`
+   - or `failed`s
 
 Example using curl:
 
@@ -774,6 +817,9 @@ curl http://localhost:8000/meetings/<meeting_id>/notes
 
 - **Background tasks run in-process.**  
   The system currently uses FastAPI BackgroundTasks rather than a dedicated job queue or worker system.
+
+- **Google Docs import jobs are stored in memory.**  
+  Import job state is not persisted and will be lost if the application restarts.
 
 - **Test coverage currently focuses on core API endpoints and utilities.**  
   The full processing pipeline and LLM integrations are not yet completely covered by automated tests.
