@@ -17,7 +17,7 @@ The project supports transcript ingestion from **`.docx` and `.pdf` files**, sto
 - Cache recent processing results in memory
 - Rate-limit repeated processing calls per meeting and LLM
 - Return consistent API error responses
-- SQL migration for initial PostgreSQL schema
+- SQL migrations for PostgreSQL schema setup and updates
 
 ---
 
@@ -91,7 +91,7 @@ meeting-notes-api
 │   │   ├── google_docs.py
 │   │   ├── parsing.py
 │   │   └── pdf_reader.py
-|   |
+│   │
 │   ├── __init__.py
 │   ├── errors.py
 │   ├── logging_config.py
@@ -102,7 +102,8 @@ meeting-notes-api
 │   ├── conftest.py
 │   ├── test_google_docs_utils.py
 │   ├── test_health.py
-│   └── test_meetings.py
+│   ├── test_meetings.py
+│   └── test_google_docs_retrieval.py
 │
 ├── .env.example
 ├── .gitignore
@@ -363,7 +364,7 @@ Example response shape:
 ```
 #### `POST /meetings/import/google-docs`
 
-Imports multiple meetings from public Google Docs.
+Imports multiple meetings from Google Docs.
 
 Each provided Google Doc is downloaded, converted to plain text, and stored as a meeting transcript.
 
@@ -406,7 +407,7 @@ curl -X POST http://localhost:8000/meetings/import/google-docs \
 }
 ```
 
-The endpoint processes each document independently.\
+The endpoint processes each document independently.
 If one document fails, the others can still be imported.
 
 ---
@@ -414,10 +415,9 @@ If one document fails, the others can still be imported.
 ### How it works
 
 1.  The API extracts the Google Doc ID from the provided URL.
-2.  The document is downloaded using the Google Docs export endpoint.
-3.  The document is converted to plain text.
-4.  The text is stored in the `raw_transcript` field.
-5.  A meeting record is created with:
+2.  The document is downloaded using the Google Docs export endpoint and converted to plain text.
+3.  The text is stored in the `raw_transcript` field.
+4.  A meeting record is created with:
 
 -   `source = "google_docs"`
 -   `source_url`
@@ -428,8 +428,6 @@ If one document fails, the others can still be imported.
 
 ### Limitations
 
--   Only **public Google Docs** are supported.
--   Private documents requiring authentication cannot be imported.
 -   Documents are imported as **plain text**, formatting is not
     preserved.
 -   The meeting date defaults to the current date if not provided.
@@ -438,14 +436,11 @@ If one document fails, the others can still be imported.
 
 ### How to test
 
-1.  Create a public Google Doc.
+1.  Create a Google Doc accessible to the configured import flow.
 2.  Add some meeting notes text.
 3.  Copy the document URL.
 4.  Send a request to:
 
-```{=html}
-<!-- -->
-```
     POST /meetings/import/google-docs
 
 Example using curl:
@@ -571,7 +566,9 @@ If the parsed date would be in the future, the parser shifts it to the previous 
 
 The repository includes `app/migrations/`
 - `001_initial_schema.sql`
-- `002_add_llm_to_notes.sql`
+- `002_add_llm_column_to_notes.sql`
+- `003_add_google_docs_source_fields_to_meetings.sql`
+- `004_allow_null_source_file.sql`
 
 These migrations define the PostgreSQL schema used by the application.
 
@@ -595,6 +592,8 @@ The database is hosted in Supabase (PostgreSQL).
 | meeting_date | date |
 | source | text |
 | source_file | text |
+| source_url | text |
+| external_id | text |
 | raw_transcript | text |
 | created_at | timestamptz |
 
@@ -689,12 +688,18 @@ OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
 ```
 
-### 5. Run the SQL migration
+### 5. Run database migrations
 
-Apply:
+Apply all migration files in order:
 
 ```sql
 app/migrations/001_initial_schema.sql
+
+app/migrations/002_add_llm_column_to_notes.sql
+
+app/migrations/003_add_google_docs_source_fields_to_meetings.sql
+
+app/migrations/004_allow_null_source_file.sql
 ```
 
 to your Supabase/PostgreSQL database.
@@ -715,12 +720,13 @@ Run the test suite with:
 pytest
 ```
 
-At the moment, the repository contains:
-- `test_health.py`
-- `test_meetings.py`
-- `conftest.py`
+The current test suite includes:
 
-`test_health.py` contains a working health-check test.
+- `test_health.py` – basic API health endpoint test
+- `test_meetings.py` – meetings endpoint behavior
+- `test_google_docs_utils.py` – Google Docs URL parsing utilities
+- `test_google_docs_retrieval.py` – Google Docs download/extraction logic
+- `conftest.py` – shared test fixtures
 
 ---
 
@@ -754,11 +760,23 @@ curl http://localhost:8000/meetings/<meeting_id>/notes
 
 ## Current Limitations
 
-- Processing cache is in-memory only, so it resets on application restart.
-- Rate limiting is in-memory only.
-- Test coverage is still minimal.
-- There is no background job queue; processing happens during the request.
-- Duplicate meeting protection depends on the `source_file` unique index.
+- **Processing cache is in-memory only.**  
+  Cached processing results are stored in memory and are lost when the application restarts.
+
+- **Rate limiting is implemented in memory.**  
+  Rate limits reset when the server restarts and are not shared across multiple instances.
+
+- **Google Docs import converts documents to plain text.**  
+  Formatting such as tables, images, and styling is not preserved during import.
+
+- **Very large transcripts may increase processing time.**  
+  Large inputs require chunking and multiple LLM calls, which can increase end-to-end latency.
+
+- **Background tasks run in-process.**  
+  The system currently uses FastAPI BackgroundTasks rather than a dedicated job queue or worker system.
+
+- **Test coverage currently focuses on core API endpoints and utilities.**  
+  The full processing pipeline and LLM integrations are not yet completely covered by automated tests.
 
 ---
 
