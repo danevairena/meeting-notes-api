@@ -51,21 +51,19 @@ def create_meeting_from_upload(
         if not raw_transcript.strip():
             raise BadRequestError("uploaded file does not contain readable transcript text")
 
-        project_id = None
-
         # resolve project id from project name or fallback to default project
         project_name_value = project_name.strip() if project_name and project_name.strip() else "unknown"
-
         project = projects_service.get_or_create_project(project_name_value)
-        project_id = project.id
 
         meeting_data = MeetingCreate(
             title=parsed_meeting.title,
             meeting_date=parsed_meeting.meeting_date,
             source=source,
             source_file=file.filename,
+            source_url=None,
+            external_id=None,
             raw_transcript=raw_transcript,
-            project_id=project_id,
+            project_id=project.id,
         )
 
         # reuse existing create meeting flow to persist the uploaded transcript
