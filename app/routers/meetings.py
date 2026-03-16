@@ -6,6 +6,8 @@ from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
 from app.services import chunks_service, meetings_service, notes_service, process_cache_service, processing_service, upload_meeting_service
 from app.errors import NotesNotFoundError, RateLimitExceededError
+from app.models.google_docs_import import GoogleDocsImportRequest, GoogleDocsImportResponse
+from app.services.google_docs_import_service import import_meetings_from_google_docs
 
 
 # create router instance for meeting related endpoints
@@ -88,3 +90,8 @@ def process_meeting(meeting_id: str, request: ProcessMeetingRequest):
     process_cache_service.set_cached_notes(meeting_id=meeting_id, llm=request.llm, notes=notes)
 
     return notes
+
+@router.post("/import/google-docs", response_model=GoogleDocsImportResponse, status_code=status.HTTP_200_OK)
+def import_google_docs_meetings(request: GoogleDocsImportRequest):
+    # delegate bulk import logic to dedicated service
+    return import_meetings_from_google_docs(request)
