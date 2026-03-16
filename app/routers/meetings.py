@@ -92,6 +92,6 @@ def process_meeting(meeting_id: str, request: ProcessMeetingRequest):
     return notes
 
 @router.post("/import/google-docs", response_model=GoogleDocsImportResponse, status_code=status.HTTP_200_OK)
-def import_google_docs_meetings(request: GoogleDocsImportRequest):
+async def import_google_docs_meetings(request: GoogleDocsImportRequest):
     # delegate bulk import logic to dedicated service
-    return import_meetings_from_google_docs(request)
+    return await import_meetings_from_google_docs(request)
