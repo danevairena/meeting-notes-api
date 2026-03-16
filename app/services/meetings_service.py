@@ -1,7 +1,8 @@
 from app.errors import MeetingNotFoundError
-from app.models.meeting import MeetingCreate, MeetingResponse, MeetingListResponse
+from app.models.meeting import MeetingCreate, MeetingListResponse, MeetingResponse
 from app.repositories import meetings_repository
 from app.services import notes_service
+
 
 # return all meetings with optional project filter
 def list_meetings(project_id: str | None = None) -> list[MeetingListResponse]:
@@ -20,6 +21,8 @@ def list_meetings(project_id: str | None = None) -> list[MeetingListResponse]:
                 meeting_date=meeting.meeting_date,
                 source=meeting.source,
                 source_file=meeting.source_file,
+                source_url=meeting.source_url,
+                external_id=meeting.external_id,
                 project_id=meeting.project_id,
                 created_at=meeting.created_at,
                 has_notes=bool(notes),
