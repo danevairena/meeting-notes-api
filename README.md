@@ -38,47 +38,45 @@ The project supports transcript ingestion from **`.docx` and `.pdf` files**, sto
 ## Project Structure
 
 ```text
-meeting-notes-api/
-├── app/
-│   ├── __init__.py
-│   ├── errors.py
-│   ├── logging_config.py
-│   ├── main.py
-│   ├── settings.py
-│   │
-│   ├── clients/
+meeting-notes-api
+├── app
+│   ├── clients
 │   │   ├── __init__.py
 │   │   ├── llm_client.py
 │   │   └── supabase_client.py
 │   │
-│   ├── migrations/
+│   ├── migrations
 │   │   ├── 001_initial_schema.sql
-│   │   └── 002_add_llm_column_to_notes.sql
+│   │   ├── 002_add_llm_column_to_notes.sql
+│   │   ├── 003_add_google_docs_source_fields_to_meetings.sql
+│   │   └── 004_allow_null_source_file.sql
 │   │
-│   ├── models/
+│   ├── models
 │   │   ├── __init__.py
 │   │   ├── error.py
+│   │   ├── google_docs_import.py
 │   │   ├── meeting.py
 │   │   ├── note.py
 │   │   ├── processing.py
 │   │   └── project.py
 │   │
-│   ├── repositories/
+│   ├── repositories
 │   │   ├── __init__.py
 │   │   ├── chunks_repository.py
 │   │   ├── meetings_repository.py
 │   │   ├── notes_repository.py
 │   │   └── projects_repository.py
 │   │
-│   ├── routers/
+│   ├── routers
 │   │   ├── __init__.py
 │   │   ├── meetings.py
 │   │   └── projects.py
 │   │
-│   ├── services/
+│   ├── services
 │   │   ├── __init__.py
 │   │   ├── chunks_service.py
 │   │   ├── file_extraction_service.py
+│   │   ├── google_docs_import_service.py
 │   │   ├── llm_extraction_service.py
 │   │   ├── meetings_service.py
 │   │   ├── notes_service.py
@@ -87,14 +85,22 @@ meeting-notes-api/
 │   │   ├── projects_service.py
 │   │   └── upload_meeting_service.py
 │   │
-│   └── utils/
-│       ├── chunking.py
-│       ├── docx_reader.py
-│       ├── parsing.py
-│       └── pdf_reader.py
+│   ├── utils
+│   │   ├── chunking.py
+│   │   ├── docx_reader.py
+│   │   ├── google_docs.py
+│   │   ├── parsing.py
+│   │   └── pdf_reader.py
+|   |
+│   ├── __init__.py
+│   ├── errors.py
+│   ├── logging_config.py
+│   ├── main.py
+│   └── settings.py
 │
-├── tests/
+├── tests
 │   ├── conftest.py
+│   ├── test_google_docs_utils.py
 │   ├── test_health.py
 │   └── test_meetings.py
 │
@@ -292,6 +298,61 @@ curl -X POST http://localhost:8000/meetings/   -H "Content-Type: application/jso
 ```
 
 #### `POST /meetings/upload`
+
+### Import meetings from Google Docs
+
+Bulk import meetings using Google Docs transcripts.
+
+**Endpoint**
+
+`POST /meetings/import/google-docs`
+
+Example request:
+
+``` json
+{
+  "meetings": [
+    {
+      "title": "Weekly Product Sync",
+      "google_doc_url": "https://docs.google.com/document/d/FILE_ID/edit"
+    }
+  ]
+}
+```
+
+Example response:
+
+``` json
+{
+  "total": 1,
+  "imported": 1,
+  "failed": 0,
+  "results": [
+    {
+      "title": "Weekly Product Sync",
+      "google_doc_url": "https://docs.google.com/document/d/FILE_ID/edit",
+      "success": true,
+      "meeting_id": "generated-meeting-id",
+      "error": null
+    }
+  ]
+}
+```
+
+#### How to test
+
+1.  create a Google Doc containing transcript text
+2.  set sharing to **Anyone with the link**
+3.  send a POST request to `/meetings/import/google-docs`
+4.  verify the response contains per-item results
+5.  retrieve the meeting with `GET /meetings/{meeting_id}`
+
+#### Known limitations
+
+-   Google Docs must be publicly accessible
+-   Documents are imported as plain text
+-   `meeting_date` is currently set to the import date
+-   Imports are processed sequentially
 
 Uploads a transcript file and creates a meeting from it.
 
