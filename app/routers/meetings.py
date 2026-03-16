@@ -1,12 +1,12 @@
 from uuid import UUID
-from fastapi import APIRouter, status, Query, File, Form, UploadFile
+from fastapi import APIRouter, status, Query, File, Form, UploadFile, BackgroundTasks
 
 from app.models.meeting import MeetingCreate, MeetingResponse, MeetingListResponse
 from app.models.note import MeetingNotesResponse
 from app.models.processing import ProcessMeetingRequest
 from app.services import chunks_service, meetings_service, notes_service, process_cache_service, processing_service, upload_meeting_service
 from app.errors import NotesNotFoundError, RateLimitExceededError
-from app.models.google_docs_import import GoogleDocsImportRequest, GoogleDocsImportResponse
+from app.models.google_docs_import import GoogleDocsImportRequest
 from app.services.google_docs_import_service import import_meetings_from_google_docs
 
 
@@ -91,7 +91,15 @@ def process_meeting(meeting_id: str, request: ProcessMeetingRequest):
 
     return notes
 
-@router.post("/import/google-docs", response_model=GoogleDocsImportResponse, status_code=status.HTTP_200_OK)
-async def import_google_docs_meetings(request: GoogleDocsImportRequest):
-    # delegate bulk import logic to dedicated service
-    return await import_meetings_from_google_docs(request)
+# start google docs import in the background
+@router.post("/import/google-docs")
+async def import_google_docs(
+    request: GoogleDocsImportRequest,
+    background_tasks: BackgroundTasks,
+):
+    background_tasks.add_task(import_meetings_from_google_docs, request)
+
+    return {
+        "status": "accepted",
+        "message": "google docs import started in background",
+    }
