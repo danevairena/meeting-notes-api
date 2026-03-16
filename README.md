@@ -299,61 +299,6 @@ curl -X POST http://localhost:8000/meetings/   -H "Content-Type: application/jso
 
 #### `POST /meetings/upload`
 
-### Import meetings from Google Docs
-
-Bulk import meetings using Google Docs transcripts.
-
-**Endpoint**
-
-`POST /meetings/import/google-docs`
-
-Example request:
-
-``` json
-{
-  "meetings": [
-    {
-      "title": "Weekly Product Sync",
-      "google_doc_url": "https://docs.google.com/document/d/FILE_ID/edit"
-    }
-  ]
-}
-```
-
-Example response:
-
-``` json
-{
-  "total": 1,
-  "imported": 1,
-  "failed": 0,
-  "results": [
-    {
-      "title": "Weekly Product Sync",
-      "google_doc_url": "https://docs.google.com/document/d/FILE_ID/edit",
-      "success": true,
-      "meeting_id": "generated-meeting-id",
-      "error": null
-    }
-  ]
-}
-```
-
-#### How to test
-
-1.  create a Google Doc containing transcript text
-2.  set sharing to **Anyone with the link**
-3.  send a POST request to `/meetings/import/google-docs`
-4.  verify the response contains per-item results
-5.  retrieve the meeting with `GET /meetings/{meeting_id}`
-
-#### Known limitations
-
--   Google Docs must be publicly accessible
--   Documents are imported as plain text
--   `meeting_date` is currently set to the import date
--   Imports are processed sequentially
-
 Uploads a transcript file and creates a meeting from it.
 
 ```bash
@@ -415,6 +360,105 @@ Example response shape:
   ],
   "llm_raw": "..."
 }
+```
+#### `POST /meetings/import/google-docs`
+
+Imports multiple meetings from public Google Docs.
+
+Each provided Google Doc is downloaded, converted to plain text, and stored as a meeting transcript.
+
+```bash
+curl -X POST http://localhost:8000/meetings/import/google-docs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "meetings": [
+      {
+        "title": "Sprint Planning",
+        "google_doc_url": "https://docs.google.com/document/d/GOOGLE_DOC_ID/edit"
+      },
+      {
+        "title": "Retrospective",
+        "google_doc_url": "https://docs.google.com/document/d/GOOGLE_DOC_ID/edit"
+      }
+    ]
+  }'
+```
+
+### Response example
+
+``` json
+{
+  "total": 2,
+  "imported": 1,
+  "failed": 1,
+  "results": [
+    {
+      "title": "Sprint Planning",
+      "status": "imported",
+      "meeting_id": "uuid"
+    },
+    {
+      "title": "Retrospective",
+      "status": "failed",
+      "error": "Document not accessible"
+    }
+  ]
+}
+```
+
+The endpoint processes each document independently.\
+If one document fails, the others can still be imported.
+
+---
+
+### How it works
+
+1.  The API extracts the Google Doc ID from the provided URL.
+2.  The document is downloaded using the Google Docs export endpoint.
+3.  The document is converted to plain text.
+4.  The text is stored in the `raw_transcript` field.
+5.  A meeting record is created with:
+
+-   `source = "google_docs"`
+-   `source_url`
+-   `external_id`
+-   `raw_transcript`
+
+---
+
+### Limitations
+
+-   Only **public Google Docs** are supported.
+-   Private documents requiring authentication cannot be imported.
+-   Documents are imported as **plain text**, formatting is not
+    preserved.
+-   The meeting date defaults to the current date if not provided.
+
+---
+
+### How to test
+
+1.  Create a public Google Doc.
+2.  Add some meeting notes text.
+3.  Copy the document URL.
+4.  Send a request to:
+
+```{=html}
+<!-- -->
+```
+    POST /meetings/import/google-docs
+
+Example using curl:
+
+``` bash
+curl -X POST http://localhost:8000/meetings/import/google-docs -H "Content-Type: application/json" -d '{
+  "meetings": [
+    {
+      "title": "Team Sync",
+      "google_doc_url": "https://docs.google.com/document/d/DOC_ID/edit"
+    }
+  ]
+}'
 ```
 
 ---
